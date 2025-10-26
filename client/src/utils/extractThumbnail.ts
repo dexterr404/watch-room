@@ -1,4 +1,4 @@
-export const extractPlayableThumbnail = (url: string): string => {
+export const extractThumbnail = (url: string): string => {
   const lowerUrl = url.toLowerCase();
 
   // YouTube
