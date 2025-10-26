@@ -10,14 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mux/upchunk": "^3.5.0",
     "@supabase/supabase-js": "^2.76.1",
     "@tailwindcss/vite": "^4.1.15",
+    "@tanstack/react-query": "^5.90.5",
     "axios": "^1.12.2",
     "lucide-react": "^0.546.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-player": "^3.3.3",
     "react-router-dom": "^7.9.4",
+    "sonner": "^2.0.7",
     "tailwindcss": "^4.1.15"
   },
   "devDependencies": {

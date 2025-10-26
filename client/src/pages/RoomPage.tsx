@@ -1,64 +1,62 @@
 import { useState } from "react";
-import { Plus,Search,Users,User} from "lucide-react";
+import { Plus,Search,Users,User as UserIcon, Globe} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import NavBar from "../components/layout/NavBar";
 import Background from "../components/layout/Background";
 import JoinRoomModal from "../components/room/JoinRoomModal";
 import CreateRoomModal from "../components/room/CreateRoomModal";
 import RoomCard from "../components/room/RoomCard";
+import { getMyRoom, getPublicRooms } from "../api/roomService";
+import type{ User } from "../types/User";
+import type { Room } from "../types/Room";
 
-export default function LobbyPage() {
+type RoomPageProps = {
+  user: User;
+};
+
+export default function LobbyPage({ user }: RoomPageProps){
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [roomCode, setRoomCode] = useState('');
 
-    // Mock data for public rooms
-    const publicRooms = [
-        {
-        id: 1,
-        title: 'Interstellar Watch Party',
-        participants: 12,
-        thumbnail: 'https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=400&h=225&fit=crop'
-        },
-        {
-        id: 2,
-        title: 'Anime Marathon Night',
-        participants: 8,
-        thumbnail: 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=400&h=225&fit=crop'
-        },
-        {
-        id: 3,
-        title: 'Documentary Series',
-        participants: 5,
-        thumbnail: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=225&fit=crop'
-        },
-        {
-        id: 4,
-        title: 'Classic Movies Collection',
-        participants: 15,
-        thumbnail: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=400&h=225&fit=crop'
-        }
-    ];
+    const { data: roomData } = useQuery({
+        queryKey: ["myRoom"],
+        queryFn: getMyRoom,
+        enabled: !!user.id,
+    });
 
-    const filteredRooms = publicRooms.filter(room =>
-        room.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const { data: publicRooms = [] } = useQuery<Room[]>({
+        queryKey: ["publicRooms"],
+        queryFn: getPublicRooms,
+        enabled: !!user.id,
+    })
+
+    const myRoom = roomData?.myRoom;
+    const joinedRooms = roomData?.joinedRooms || [];
 
     return (
         <div className="min-h-screen bg-black text-white">
         {/* Stars background effect */}
         <Background />
-        <NavBar />
+        <NavBar user={user}/>
         {/* Main Content */}
         <main className="relative max-w-7xl mx-auto px-6 py-8">
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 mb-8">
             <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 cursor-pointer px-6 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-purple-500/50 z-20"
+            disabled={!!myRoom}
+            onClick={() => !myRoom && setShowCreateModal(true)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all shadow-lg z-20
+                ${
+                myRoom
+                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    : "bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 cursor-pointer hover:shadow-purple-500/50"
+                }
+            `}
             >
-                <Plus className="w-5 h-5" />
-                Create Room
+            <Plus className="w-5 h-5" />
+            {myRoom ? "Room Created" : "Create Room"}
             </button>
             <button
                 onClick={() => setShowJoinModal(true)}
@@ -86,32 +84,49 @@ export default function LobbyPage() {
             {/* My Rooms Section */ }
             <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-purple-400" />
-                    My Rooms
+                    <UserIcon className="w-5 h-5 text-purple-400" />
+                    My Room
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {
-                        filteredRooms.length < 0 ? (
-                            <h1>No Rooms</h1>
-                        ) : (
-                            filteredRooms.map((room) => (
-                                <RoomCard key={room.id} room={room}/>
-                            ))
-                        )
-                    }
+                    {myRoom ? (
+                    <RoomCard room={myRoom} />
+                    ) : (
+                    <p>No active room found</p>
+                    )}
                 </div>
             </div>
+            {/* Joined Rooms */}
+            <section>
+            <h2 className="text-xl font-semibold mt-4 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-400" />
+                Joined Rooms
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {joinedRooms.length > 0 ? (
+                joinedRooms.map((r:Room) => <RoomCard key={r.id} room={r} />)
+                ) : (
+                <p>You haven’t joined any room yet.</p>
+                )}
+            </div>
+            </section>
             
             {/* Public Rooms Section */}
             <div>
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 mt-4">
-                    <Users className="w-5 h-5 text-purple-400" />
+                <h2 className="text-xl font-semibold mb-4 flex items-center  gap-2 mt-4">
+                    <Globe className="w-5 h-5 text-purple-400" />
                     Public Rooms
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredRooms.map((room) => (
-                        <RoomCard key={room.id} room={room}/>
-                    ))}
+                    {
+                        publicRooms.length > 0 ? (
+                        publicRooms.map((room) => (
+                            <RoomCard key={room.id} room={room}/>
+                        ))
+                        ) : (
+                            <p>No public rooms found</p>
+                        )
+                    
+                    }
                 </div>
             </div>
         </main>

@@ -1,41 +1,42 @@
 import { useState,useEffect,useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate,useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getRoomById } from '../api/roomService';
+import { useWatchRoom } from '../hooks/useWatchRoom';
 import { Users, Send, Settings, ArrowLeftToLine } from 'lucide-react';
+import formatDate from '../utils/formatDate';
 import WatchRoomSettings from '../components/room/WatchRoomSettings';
 import ReactPlayer from 'react-player';
+import type { User } from '../types/User';
 
-export default function RoomPage() {
+type WatchRoomPageProps = {
+  user: User
+}
+
+export default function WatchRoomPage({user}: WatchRoomPageProps) {
   const navigate = useNavigate();
-  const messages = [
-    { id: 1, user: 'Alice', avatar: 'A', message: 'This scene is amazing!', time: '10:23 PM' },
-    { id: 2, user: 'Bob', avatar: 'B', message: 'I know right! 🔥', time: '10:24 PM' },
-    { id: 3, user: 'Charlie', avatar: 'C', message: 'Best movie ever', time: '10:25 PM' },
-  ];
+  const { roomId } = useParams<{ roomId: string }>();
+  const { messages,participants,sendMessage } = useWatchRoom(roomId!);
+
+  const { data: roomData } = useQuery({
+    queryKey: ["room", roomId],
+    queryFn: () => getRoomById(roomId!),
+    enabled: !!roomId,
+  });
+
+  const room = roomData?.room;
+  const roomParticipants = roomData?.participants;
 
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const prevMessageCount = useRef(messages.length);
-  const [showChat, setShowChat] = useState(false);
+  const [showChat, setShowChat] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const isAutoScroll = room?.auto_scroll || false;
 
-  const room = {
-    id: 1,
-    title: 'Garp vs Aokiji ',
-    participants: 12,
-    videoUrl: 'https://www.youtube.com/watch?v=39pVcYU5Oo4'
-  };
-
- 
-
-  const participants = [
-    { id: 1, name: 'Alice', avatar: 'A', color: 'from-blue-500 to-purple-500' },
-    { id: 2, name: 'Bob', avatar: 'B', color: 'from-green-500 to-teal-500' },
-    { id: 3, name: 'Charlie', avatar: 'C', color: 'from-pink-500 to-red-500' },
-  ];
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async() => {
     if (message.trim()) {
-      console.log('Sending:', message);
+      await sendMessage(message);
       setMessage('');
     }
   };
@@ -48,10 +49,11 @@ export default function RoomPage() {
   };
 
   useEffect(() => {
-    if (messages.length > prevMessageCount.current) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAutoScroll && messages.length > prevMessageCount.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+    prevMessageCount.current = messages.length;
+  }, [messages, isAutoScroll]);
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -63,18 +65,21 @@ export default function RoomPage() {
               <ArrowLeftToLine className='w-4 h-4 mt-1.5'/>
             </button>
             <div>
-                <h1 className="text-[clamp(1rem,2vw+0.5rem,1.5rem)] font-bold">{room.title}</h1>
+                <h1 className="text-[clamp(1rem,2vw+0.5rem,1.5rem)] font-bold">{room?.title}</h1>
                 <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                     <Users className="w-4 h-4" />
-                    <span>{room.participants} watching</span>
+                    <span>{participants.length} watching</span>
                 </div>
             </div>
           </div>
-          <button
-           onClick={() => setIsSettingsOpen(prev => !prev)}
-           className="cursor-pointer">
-            <Settings className="w-5 h-5" />
-          </button>
+          {room?.owner_id === user?.id && (
+            <button
+              onClick={() => setIsSettingsOpen(prev => !prev)}
+              className="cursor-pointer"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -85,7 +90,7 @@ export default function RoomPage() {
           {/* Video Player */}
           <div className="flex-1 relative bg-gray-900 flex items-center justify-center">
             <ReactPlayer
-              src={room.videoUrl}
+              src={room?.video_url}
               controls
               width="100%"
               height="100%"
@@ -97,15 +102,13 @@ export default function RoomPage() {
           <div className="hidden md:block bg-gray-900/50 border-t border-gray-800 px-6 py-3">
             <div className="flex items-center flex-wrap gap-3">
               <span className="text-sm text-gray-400 whitespace-nowrap">Watching now:</span>
-              {participants.map((participant) => (
+              {participants?.map((participant) => (
                 <div
-                  key={participant.id}
+                  key={participant?.user_id}
                   className="flex items-center gap-2 bg-gray-800 rounded-full px-3 py-1.5 whitespace-nowrap"
                 >
-                  <div className={`w-6 h-6 bg-linear-to-br ${participant.color} rounded-full flex items-center justify-center text-xs font-semibold`}>
-                    {participant.avatar}
-                  </div>
-                  <span className="text-sm">{participant.name}</span>
+                  <img src={participant?.avatar_url} className="w-8 h-8 rounded-full shrink-0"/>
+                  <span className="text-sm">{participant?.username}</span>
                 </div>
               ))}
             </div>
@@ -127,22 +130,56 @@ export default function RoomPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 min-h-[200px] max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-auto-hide p-4 space-y-4">
-              {messages.map((msg) => (
-                <div ref={messagesEndRef} key={msg.id} className="flex gap-3">
-                  <div className="w-8 h-8 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-sm font-semibold shrink-0">
-                    {msg.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-sm">{msg.user}</span>
-                      <span className="text-xs text-gray-500">{msg.time}</span>
+            <div className="flex-1 max-h-[40vh] sm:max-h-[60vh] md:max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-auto-hide p-4 space-y-4">
+              {messages?.map((msg) => {
+                const isMe = msg.user_id === user?.id;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex items-end gap-2 ${
+                      isMe ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {/* Avatar for others only */}
+                    {!isMe && (
+                      <img
+                        src={msg?.user?.avatar_url}
+                        className="w-8 h-8 rounded-full shrink-0 self-end"
+                      />
+                    )}
+
+                    {/* Message bubble */}
+                    <div
+                      className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm ${
+                        isMe
+                          ? 'bg-purple-600 text-white rounded-br-none'
+                          : 'bg-gray-800 text-gray-100 rounded-bl-none'
+                      }`}
+                    >
+                      {/* Username (only for others) */}
+                      {!isMe && (
+                        <div className="font-semibold text-xs text-gray-400 mb-1">
+                          {msg?.user?.username}
+                        </div>
+                      )}
+                      <p className="wrap-break-word">{msg.content}</p>
+                      <div
+                        className={`text-[10px] mt-1 ${
+                          isMe ? 'text-purple-200 text-right' : 'text-gray-500'
+                        }`}
+                      >
+                        {formatDate(msg.created_at)}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-300 mt-1 wrap-break-words">{msg.message}</p>
+
+                    {/* Spacer for my messages */}
+                    {isMe && <div className="w-8" />}
                   </div>
-                </div>
-              ))}
+                );
+              })}
+              <div ref={messagesEndRef} />
             </div>
+
 
             {/* Message Input */}
             <div className="p-4 border-t border-gray-800">
@@ -168,15 +205,13 @@ export default function RoomPage() {
             <div className="block md:hidden bg-gray-900/50 border-t border-gray-800 px-6 py-3">
               <div className="flex items-center gap-3 overflow-x-auto">
                 <span className="text-sm text-gray-400 whitespace-nowrap">Watching now:</span>
-                {participants.map((participant) => (
+                {participants?.map((participant) => (
                   <div
-                    key={participant.id}
+                    key={participant?.user_id}
                     className="flex items-center gap-2 bg-gray-800 rounded-full px-3 py-1.5 whitespace-nowrap"
                   >
-                    <div className={`w-6 h-6 bg-linear-to-br ${participant.color} rounded-full flex items-center justify-center text-xs font-semibold`}>
-                      {participant.avatar}
-                    </div>
-                    <span className="text-sm">{participant.name}</span>
+                    <img src={participant?.avatar_url} className="w-8 h-8 rounded-full shrink-0"/>
+                    <span className="text-sm">{participant?.username}</span>
                   </div>
                 ))}
               </div>
@@ -194,7 +229,7 @@ export default function RoomPage() {
           </button>
         )}
         {isSettingsOpen && (
-          <WatchRoomSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}/>
+          <WatchRoomSettings room={room} roomParticipants={roomParticipants} isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}/>
         )
         }
       </div>

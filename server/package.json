@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@mux/mux-node": "^12.8.0",
     "@supabase/supabase-js": "^2.76.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

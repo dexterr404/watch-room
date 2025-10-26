@@ -3,6 +3,8 @@ import cors from "cors"
 import dotenv from "dotenv"
 
 import authRoutes from "./routes/authRoutes"
+import roomRoutes from "./routes/roomRoutes"
+import muxRoutes from "./routes/muxRoutes"
 
 
 dotenv.config();
@@ -11,6 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/rooms', roomRoutes);
+app.use('/api/mux', muxRoutes);
 
 
 const PORT = process.env.PORT || 5000;

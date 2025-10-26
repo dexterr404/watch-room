@@ -41,7 +41,6 @@ export const registerUser = async (req: Request, res: Response) => {
 };
 
 export const getUser = async (req: Request, res: Response) => {
-  console.log("[getUser] called");
   const user = (req as any).user;
   
   if (!user) {

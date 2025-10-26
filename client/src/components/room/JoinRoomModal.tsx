@@ -1,4 +1,8 @@
 import { X } from "lucide-react"
+import { joinRoomByKey } from "../../api/roomService";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 type JoinRoomModalProps = {
     setShowJoinModal: (value: boolean) => void;
@@ -7,6 +11,23 @@ type JoinRoomModalProps = {
 }
 
 export default function JoinRoomModal({setShowJoinModal,roomCode,setRoomCode}: JoinRoomModalProps) {
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleJoin = async() => {
+        setIsLoading(true)
+        try {
+            const res = await joinRoomByKey(roomCode);
+            toast.success("Room joined successfully");
+            navigate(`${res.roomId}`)
+        } catch (error) {
+            console.log('Error in joining a room by key', error);
+            toast.error("Failed to join room");
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-md w-full p-6">
@@ -24,14 +45,14 @@ export default function JoinRoomModal({setShowJoinModal,roomCode,setRoomCode}: J
                     <label className="block text-sm font-medium mb-2">Room Code</label>
                     <input
                     type="text"
-                    placeholder="Enter 6-digit room code..."
+                    placeholder="Enter 12-digit room code..."
                     value={roomCode}
                     onChange={(e) => setRoomCode(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-2xl tracking-widest"
-                    maxLength={6}
+                    maxLength={12}
                     />
                 </div>
-                <button className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-3 rounded-lg font-semibold transition-all mt-6">
+                <button onClick={handleJoin} disabled={isLoading} className={`w-full bg-linear-to-r from-purple-600 to-pink-600 ${isLoading ? "hover:from-purple-700 hover:to-pink-700" : ""} py-3 rounded-lg font-semibold transition-all mt-6`}>
                     Join Room
                 </button>
                 </div>

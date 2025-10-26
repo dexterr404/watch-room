@@ -6,8 +6,13 @@ import { supabase } from "../../config/supabaseClient";
 import DropdownMenu from "../ui/DropdownMenu"
 import DropdownMenuItem from "../ui/DropdownMenuItem"
 import Modal from "../ui/Modal"
+import type { User } from "../../types/User";
 
-export default function NavBar() {
+type NavBarProps = {
+    user: User
+}
+
+export default function NavBar({user}: NavBarProps) {
     const navigate = useNavigate();
     const[isMenuOpen, setIsMenuOpen] = useState(false);
     const[isLogout, setIsLogout] = useState(false);
@@ -40,10 +45,8 @@ export default function NavBar() {
 
                     {/* User Profile */}
                     <div className="flex relative items-center gap-3 bg-gray-900 rounded-full px-4 py-2 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
-                        <div className="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm font-semibold">
-                        JD
-                        </div>
-                        <span className="text-sm font-medium">John Doe</span>
+                        <img src={user.avatar_url} className="w-8 h-8 rounded-full"/>
+                        <span className="text-sm font-medium sm:block hidden">{user.username}</span>
                         <DropdownMenu isOpen={isMenuOpen} className="top-full p-0 mt-2 right-0 w-48 z-100">
                             <DropdownMenuItem icon={LogOut} onClick={() => setIsLogout(true)}>Logout</DropdownMenuItem>
                         </DropdownMenu>
