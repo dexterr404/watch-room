@@ -208,10 +208,10 @@ export default function WatchRoomPage({user}: WatchRoomPageProps) {
                 {participants?.map((participant) => (
                   <div
                     key={participant?.user_id}
-                    className="flex items-center gap-2 bg-gray-800 rounded-full px-3 py-1.5 whitespace-nowrap"
+                    className="flex items-center gap-2 bg-gray-800 rounded-full px-3 py-1.5 whitespace-nowrap overflow-hidden"
                   >
                     <img src={participant?.avatar_url} className="w-8 h-8 rounded-full shrink-0"/>
-                    <span className="text-sm">{participant?.username}</span>
+                    <span className="text-sm truncate">{participant?.username}</span>
                   </div>
                 ))}
               </div>
