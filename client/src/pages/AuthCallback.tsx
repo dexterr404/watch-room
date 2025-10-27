@@ -35,23 +35,46 @@ export default function AuthCallback() {
 
     return (
         <>
-        <div className="flex justify-center items-center min-h-screen bg-linear-to-br from-purple-600 via-pink-500 to-red-500">
-            <div className="flex flex-col items-center gap-4">
-                {/* Spinning circle with logo */}
-                <div className="relative">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Play className="w-10 h-10 text-white" fill="white" />
-                    </div>
-                    <div className="absolute inset-0 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="flex justify-center items-center min-h-screen bg-gray-950 relative overflow-hidden">
+                {/* Animated background */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-pink-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
                 </div>
-                
-                {/* Text */}
-                <div className="text-center">
-                    <h2 className="text-xl font-bold text-white mb-1">Authenticating</h2>
-                    <p className="text-white/80 text-sm">Please wait...</p>
+
+                <div className="relative z-10 flex flex-col items-center gap-6">
+                    {/* Spinning circles with logo */}
+                    <div className="relative">
+                        {/* Outer spinning ring */}
+                        <div className="absolute inset-0 w-24 h-24 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin"></div>
+                        
+                        {/* Middle spinning ring (opposite direction) */}
+                        <div className="absolute inset-2 w-20 h-20 border-4 border-transparent border-b-pink-500 border-l-purple-500 rounded-full animate-spin-reverse"></div>
+                        
+                        {/* Logo container */}
+                        <div className="relative w-24 h-24 flex items-center justify-center">
+                            <div className="w-14 h-14 bg-linear-to-br from-purple-600 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/50 animate-pulse-slow">
+                                <Play className="w-7 h-7 text-white" fill="white" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Text with fade animation */}
+                    <div className="text-center animate-fade-in">
+                        <h2 className="text-2xl font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                            Authenticating
+                        </h2>
+                        <p className="text-gray-400 text-sm">Securing your session...</p>
+                    </div>
+
+                    {/* Loading dots */}
+                    <div className="flex gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
                 </div>
             </div>
-        </div>
         </>
     )
 }
