@@ -6,6 +6,8 @@
 
 > A modern and secure **video watchroom app** where friends can stream, chat, and share videos together — powered by **React, TypeScript, Node.js, Supabase, and Mux**.
 
+**🌐 [Live Demo](https://watch-room.dexterr404.dev/)** | **📂 [GitHub Repository](https://github.com/dexterr404/watch-room)**
+
 ---
 
 ## 🚀 Overview
