@@ -11,6 +11,7 @@ import RoomPage from "./pages/RoomPage"
 import WatchRoomPage from "./pages/WatchRoomPage"
 import NotFound from "./pages/NotFound"
 import AuthCallback from "./pages/AuthCallback"
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -51,7 +52,8 @@ function App() {
       />
       <Routes>
         {/*Public Route*/}
-        <Route path="/login" element={<AuthPage />}/>
+        <Route path="/" element={<LandingPage />}/>
+        <Route path="/auth" element={<AuthPage />}/>
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="*" element={<NotFound />}/>
         {/*Protected Routes*/}

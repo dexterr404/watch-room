@@ -25,7 +25,7 @@ export default function NavBar({user}: NavBarProps) {
         if (error) throw error;
 
         // redirect to login page
-        navigate("/login", { replace: true });
+        navigate("/auth", { replace: true });
         } catch (err) {
         console.error("Logout failed:", err);
         alert("Failed to logout. Please try again.");
