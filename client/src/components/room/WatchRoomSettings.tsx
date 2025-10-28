@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { X, ChevronDown, ChevronUp, Video, Lock, MessageSquare, Info, Shield,Loader,Upload, RefreshCcw } from "lucide-react";
 import type { Room } from "../../types/Room";
 import type { MuxAsset } from "../../types/Mux";
@@ -6,7 +6,7 @@ import { extractThumbnail } from "../../utils/extractThumbnail";
 import { uploadMuxVideo } from "../../services/muxService";
 import { deleteUploadedVideo } from "../../api/muxService";
 import { useMutation,useQueryClient } from "@tanstack/react-query";
-import { changeRoomKey, kickParticipant, updateRoom } from "../../api/roomService";
+import { changeRoomKey, updateRoom } from "../../api/roomService";
 import { toast } from "sonner";
 
 export type Participant = {
@@ -26,9 +26,10 @@ type WatchRoomSettingsProps = {
     isOpen: boolean;
     onClose: () => void;
     roomParticipants: Participant[];
+    onKickUser: (participant: Participant) => void; 
 }
 
-export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipants }: WatchRoomSettingsProps) {
+export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipants,onKickUser }: WatchRoomSettingsProps) {
   const queryClient = useQueryClient();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [roomTitle, setRoomTitle] = useState<string>(room.title);
@@ -39,6 +40,7 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
   const [chatAutoScroll, setChatAutoScroll] = useState<boolean>(room.auto_scroll || false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [newMuxAsset, setNewMuxAsset] = useState<MuxAsset | null>(null); // NEW video uploaded
+  const [uploadCancelFn, setUploadCancelFn] = useState<(() => void) | null>(null);
   
   // Store the ORIGINAL room's Mux asset to delete later
   const originalAssetId = room.asset_id || null;
@@ -77,13 +79,26 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
       }
 
       // Upload the new video to Mux
-      const result = await uploadMuxVideo(file, (p) => setUploadProgress(p));
+      const { assetPromise, cancel } = await uploadMuxVideo(
+        file, 
+        (p) => setUploadProgress(p)
+      );
+
+      // Store cancel function
+      setUploadCancelFn(() => cancel);
+
+      // Wait for upload to complete
+      const result = await assetPromise;
 
       setNewMuxAsset({
         playbackId: result.playbackId,
         assetId: result.assetId,
         thumbnail: result.thumbnail
       });
+      
+      // Clear cancel function after successful upload
+      setUploadCancelFn(null);
+
       toast.success('File attached successfully');
     } catch (error) {
       console.error('Upload failed:', error);
@@ -160,6 +175,14 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
   };
 
   const handleSwitchToLink = async() => {
+    // Cancel ongoing upload if switching tabs
+    if (uploadCancelFn) {
+      uploadCancelFn();
+      setUploadCancelFn(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+
     if (newMuxAsset?.assetId) {
       try {
         await deleteUploadedVideo(newMuxAsset.assetId);
@@ -172,6 +195,7 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
     setUploadProgress(0);
     setUploadType('link');
   };
+
 
   const handleSwitchToUpload = () => {
     setVideoLink('');
@@ -213,23 +237,16 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
     }
   }
 
-  const handleKickParticipant = async (targetUserId: string) => {
-    if (!room?.id) return;
-    const confirmKick = confirm("Are you sure you want to remove this participant?");
-    if (!confirmKick) return;
-
-    try {
-      await kickParticipant(room.id, targetUserId);
-      toast.success("Participant removed successfully!");
-
-      queryClient.invalidateQueries({ queryKey: ["room", room.id] });
-    } catch (error) {
-      console.error("Error kicking participant:", error);
-      toast.error("Failed to remove participant.");
-    }
-  }
-
   const handleClose = async () => {
+    // Cancel ongoing upload if exists
+    if (uploadCancelFn) {
+      console.log("Canceling ongoing upload...");
+      uploadCancelFn();
+      setUploadCancelFn(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+
     // If user uploaded a new video but didn't save
     if (newMuxAsset?.assetId) {
       try {
@@ -249,6 +266,16 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
     // Call the parent onClose
     onClose();
   };
+
+  useEffect(() => {
+    // Cleanup on component unmount
+    return () => {
+      if (uploadCancelFn) {
+        console.log("Component unmounting, canceling upload...");
+        uploadCancelFn();
+      }
+    };
+  }, [uploadCancelFn]);
 
   return (
     <div
@@ -419,7 +446,7 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
                             <button
                                 onClick={handleUploadVideo}
                                 disabled={isUploading || (uploadType === 'link' ? !videoLink : !newMuxAsset)}
-                                className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                className={`w-full bg-linear-to-r from-purple-600 to-pink-600 ${isUploading || (uploadType === 'link' ? !videoLink : !newMuxAsset) ? "" : "hover:from-purple-700 hover:to-pink-700 cursor-pointer"}  text-sm px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
                             >
                                 {isUploading ? (
                                     <>
@@ -522,7 +549,7 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
                                         <div className="flex gap-2">
                                             <button
                                                 className="text-xs text-red-400 hover:text-red-500 border border-red-500/30 px-2 py-1 rounded-lg transition"
-                                                onClick={() => handleKickParticipant(p?.user_id)}
+                                                onClick={() => onKickUser(p)}
                                             >
                                                 Kick
                                             </button>
@@ -539,9 +566,9 @@ export default function WatchRoomSettings({ room, isOpen, onClose, roomParticipa
             <div className="border-t border-gray-800 p-4 shrink-0 bg-gray-900">
                 <button
                     onClick={handleSaveChanges}
-                    disabled={isUploading}
-                    className="w-full px-6 py-3 bg-linear-to-br from-purple-600 to-pink-600 cursor-pointer hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                    disabled={isUploading || (!!newMuxAsset && !room.asset_id)}
+                    className={`w-full px-6 py-3 bg-linear-to-br from-purple-600 to-pink-600 ${ isUploading || (!!newMuxAsset && !room.asset_id) ? "" : "cursor-pointer hover:from-purple-700 hover:to-pink-700"} text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                `}>
                     {isUploading ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>

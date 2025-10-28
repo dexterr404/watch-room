@@ -1,22 +1,41 @@
 import { useState,useEffect,useRef } from 'react';
 import { useNavigate,useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery,useQueryClient } from '@tanstack/react-query';
 import { getRoomById } from '../api/roomService';
 import { useWatchRoom } from '../hooks/useWatchRoom';
+import { kickParticipant } from '../api/roomService';
 import { Users, Send, Settings, ArrowLeftToLine } from 'lucide-react';
+import { toast } from 'sonner';
 import formatDate from '../utils/formatDate';
 import WatchRoomSettings from '../components/room/WatchRoomSettings';
 import ReactPlayer from 'react-player';
 import type { User } from '../types/User';
+import Modal from '../components/ui/Modal';
+
+export type Participant = {
+  id: string;
+  room_id: string;
+  user_id: string;
+  joined_at: string;
+  left_at?: string | null;
+  profiles?: {
+    username?: string;
+    avatar_url?: string;
+  };
+};
 
 type WatchRoomPageProps = {
   user: User
 }
 
 export default function WatchRoomPage({user}: WatchRoomPageProps) {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId: string }>();
   const { messages,participants,sendMessage } = useWatchRoom(roomId!);
+  const [isKickUser, setIsKickUser] = useState(false);
+  const [isKicking, setIsKicking] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const { data: roomData } = useQuery({
     queryKey: ["room", roomId],
@@ -47,6 +66,27 @@ export default function WatchRoomPage({user}: WatchRoomPageProps) {
       handleSendMessage();
     }
   };
+
+   const handleKickUser = async () => {
+      if (!room?.id || !selectedUser) return;
+  
+      setIsKicking(true);
+      try {
+        await kickParticipant(room.id, selectedUser.id);
+        toast.success(`${selectedUser.username} was removed successfully!`);
+  
+        // Refresh the room participants list
+        queryClient.invalidateQueries({ queryKey: ["room", room.id] });
+  
+        setIsKickUser(false);
+        setSelectedUser(null);
+      } catch (error) {
+        console.error("Error kicking participant:", error);
+        toast.error("Failed to remove participant.");
+      } finally {
+        setIsKicking(false);
+      }
+    };
 
   useEffect(() => {
     if (isAutoScroll && messages.length > prevMessageCount.current) {
@@ -229,10 +269,54 @@ export default function WatchRoomPage({user}: WatchRoomPageProps) {
           </button>
         )}
         {isSettingsOpen && (
-          <WatchRoomSettings room={room} roomParticipants={roomParticipants} isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}/>
+          <WatchRoomSettings
+          room={room} 
+          roomParticipants={roomParticipants} 
+          isOpen={isSettingsOpen} 
+          onClose={() => setIsSettingsOpen(false)} 
+          onKickUser={(participant) => {
+            setSelectedUser({
+              id: participant.user_id,
+              username: participant.profiles?.username || "Unknown",
+              avatar_url: participant.profiles?.avatar_url || "",
+            });
+            setIsKickUser(true);
+          }}/>
         )
         }
       </div>
+
+      {isKickUser && (
+        <Modal onClose={() => setIsKickUser(false)} title="Confirm Kick">
+          {isKicking ? (
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-12 h-12 border-4 border-gray-700 border-t-red-500 rounded-full animate-spin"></div>
+              <p className="text-gray-300">Removing user...</p>
+            </div>
+          ) : (
+            <>
+              <p className="mb-4 text-gray-300">
+                Are you sure you want to remove{" "}
+                <span className="text-red-400 font-semibold">{selectedUser?.username}</span> from the room?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsKickUser(false)}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 cursor-pointer rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleKickUser}
+                  className="flex-1 bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 py-2 cursor-pointer rounded-lg transition-all"
+                >
+                  Kick User
+                </button>
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

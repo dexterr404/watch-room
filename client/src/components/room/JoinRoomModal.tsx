@@ -1,4 +1,4 @@
-import { X } from "lucide-react"
+import { X,Loader } from "lucide-react"
 import { joinRoomByKey } from "../../api/roomService";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -52,8 +52,20 @@ export default function JoinRoomModal({setShowJoinModal,roomCode,setRoomCode}: J
                     maxLength={12}
                     />
                 </div>
-                <button onClick={handleJoin} disabled={isLoading} className={`w-full bg-linear-to-r from-purple-600 to-pink-600 ${isLoading ? "hover:from-purple-700 hover:to-pink-700" : ""} py-3 rounded-lg font-semibold transition-all mt-6`}>
-                    Join Room
+                <button
+                    onClick={handleJoin}
+                    disabled={isLoading}
+                    className={`w-full flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 to-pink-600 
+                        ${isLoading ? "opacity-70 cursor-not-allowed" : "hover:from-purple-700 hover:to-pink-700 cursor-pointer"}  py-3 rounded-lg font-semibold transition-all mt-6`}
+                    >
+                    {isLoading ? (
+                        <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Joining...
+                        </>
+                    ) : (
+                        "Join Room"
+                    )}
                 </button>
                 </div>
             </div>

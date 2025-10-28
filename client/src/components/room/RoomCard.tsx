@@ -2,6 +2,7 @@ import { Users,Play } from "lucide-react"
 import type { Room } from "../../types/Room"
 import { useNavigate } from "react-router-dom"
 import  defaultMovieThumbnail  from "../../assets/movie_default.svg"
+import { useWatchRoom } from "../../hooks/useWatchRoom"
 
 type RoomCardProps = {
     room: Room
@@ -9,6 +10,7 @@ type RoomCardProps = {
 
 export default function RoomCard({room}: RoomCardProps) {
     const navigate = useNavigate();
+    const { participants } = useWatchRoom(room.id!);
 
     return (
         <div
@@ -32,7 +34,7 @@ export default function RoomCard({room}: RoomCardProps) {
                 <div className="absolute inset-0 bg-linear-to-t from-black/80 to-transparent" />
                     <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm px-2 py-1 rounded text-xs flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        {room.participants}
+                        {participants.length}
                     </div>
                 </div>
                 <div className="p-4">
