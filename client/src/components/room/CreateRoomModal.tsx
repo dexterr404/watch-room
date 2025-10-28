@@ -37,16 +37,17 @@ export default function CreateRoomModal({setShowCreateModal}: CreateRoomModalPro
         setIsUploading(true);
         
         try {
-            const result = await uploadMuxVideo(file, (p) => setUploadProgress(p));
+            const { assetPromise } = uploadMuxVideo(file, (p) => setUploadProgress(p));
+            const assetRes = await assetPromise;
             if (muxAsset?.assetId) {
                 await deleteUploadedVideo(muxAsset.assetId);
             }
             
             // Store all Mux data in state
             setMuxAsset({
-                playbackId: result.playbackId,
-                assetId: result.assetId,
-                thumbnail: result.thumbnail
+                playbackId: assetRes.playbackId,
+                assetId: assetRes.assetId,
+                thumbnail: assetRes.thumbnail,
             });
             toast.success('Video uploaded successfully!');
         } catch (error) {
